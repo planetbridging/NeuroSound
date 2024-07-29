@@ -1,8 +1,9 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ChakraProvider } from "@chakra-ui/react";
-import { Box, Button, Text, Image, VStack, Flex } from "@chakra-ui/react";
+import { Box, Button, Text, Image, Flex } from "@chakra-ui/react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -11,7 +12,33 @@ export const metadata = {
   description: "Flukebot",
 };
 
-export default function RootLayout({ children }) {
+async function checkAuth(token) {
+  if (!token) return null;
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/check-auth`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store", // Disable caching for this request
+      }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      return data.username;
+    }
+  } catch (error) {
+    console.error("Error checking authentication:", error);
+  }
+  return null;
+}
+
+export default async function RootLayout({ children }) {
+  const cookieStore = cookies();
+  const token = cookieStore.get("token");
+  const loggedInUser = token ? await checkAuth(token.value) : null;
+
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -43,17 +70,60 @@ export default function RootLayout({ children }) {
                 display="flex"
                 alignItems="center"
               >
-                <Link href="/">
-                  <Button colorScheme="teal" variant="outline" mr="4">
+                <Link href="/" passHref>
+                  <Button as="span" colorScheme="teal" variant="outline" mr="4">
                     Home
                   </Button>
                 </Link>
-                <Link href="/neuralforge">
-                  <Button colorScheme="teal" variant="outline">
-                    <Image src={"/logo.png"} alt="Logo" boxSize="50px" />
+                <Link href="/neuralforge" passHref>
+                  <Button as="span" colorScheme="teal" variant="outline">
+                    <Image src="/logo.png" alt="Logo" boxSize="50px" />
                     Neural Forge
                   </Button>
                 </Link>
+                <Link href="/neuralsound" passHref>
+                  <Button as="span" colorScheme="teal" variant="outline">
+                    <Image src="/neuralsound.png" alt="Logo" boxSize="50px" />
+                    Neural Sound
+                  </Button>
+                </Link>
+                {loggedInUser ? (
+                  <>
+                    <Link href="/profile" passHref>
+                      <Button
+                        as="span"
+                        colorScheme="teal"
+                        variant="outline"
+                        mr="4"
+                      >
+                        Profile
+                      </Button>
+                    </Link>
+                    <Link href="/api/logout" passHref>
+                      <Button as="span" colorScheme="teal" variant="outline">
+                        Logout
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" passHref>
+                      <Button
+                        as="span"
+                        colorScheme="teal"
+                        variant="outline"
+                        mr="4"
+                      >
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/register" passHref>
+                      <Button as="span" colorScheme="teal" variant="outline">
+                        Register
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </Box>
               <Box position="relative" zIndex="1" paddingBottom="100px">
                 {children}
